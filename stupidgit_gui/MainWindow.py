@@ -38,6 +38,29 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 '''
 
+class FileDropTarget(wx.FileDropTarget):
+    def __init__(self, window):
+        wx.FileDropTarget.__init__(self)
+        self.window = window
+
+    def OnDropFiles(self, x, y, filenames):
+        try:
+            repo = Repository(filenames.pop(0))
+
+            if self.window.mainRepo:
+                self.window.currentRepo = repo
+                self.window.ReloadRepo()
+                self.window.SetTitle("stupidgit - %s" % os.path.basename(repo.dir))
+            else:
+                self.window.SetMainRepo(repo)
+
+        except GitError, msg:
+            wx.MessageBox(str(msg), 'Error', style=wx.OK|wx.ICON_ERROR)
+
+        for filename in filenames:
+            new_win = MainWindow(None, -1, Repository(filename))
+            new_win.Show(True)
+
 class MainWindow(wx.Frame):
     def __init__(self, parent, id, repo):
         wx.Frame.__init__(self, parent, wx.ID_ANY, "stupidgit", size=(550,600))
@@ -56,6 +79,9 @@ class MainWindow(wx.Frame):
             self.mainRepo = None
             self.currentRepo = None
             self.CreateEmptyText()
+			
+        drop_target = FileDropTarget(self)
+        self.SetDropTarget(drop_target)
 
     def CreateMenu(self):
         filemenu = wx.Menu()
